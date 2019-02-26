@@ -2,16 +2,11 @@ package openstack
 
 import (
 	"fmt"
-	"log"
-	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/extradhcpopts"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/amphorae"
 )
-
 
 func dataSourceAmphoraeVrrpIp() *schema.Resource {
 	return &schema.Resource{
@@ -23,50 +18,49 @@ func dataSourceAmphoraeVrrpIp() *schema.Resource {
 				Optional: true,
 			},
 			"ips": {
-			    Type:   schema.TypeList,
-			    Computed:   true,
-			    Elem:   &schema.Schema{Type: schema.TypeString},
-			}
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
 		},
 	}
 }
 
 func dataSourceAmphoraeVrrpIpV2Read(d *schema.ResourceData, meta interface{}) error {
+
 	config := meta.(*Config)
-	networkingClient, err := config.networkingV2Client(GetRegion(d, config))
-	
+	lbClient, err := config.loadBalancerV2Client(GetRegion(d, config))
+
 	listOpts := amphorae.ListOpts{}
 
 	if v, ok := d.GetOk("loadbalancer_id"); ok {
 		listOpts.LoadbalancerID = v.(string)
 	}
 
-
-	allPages, err := ports.List(networkingClient, listOpts).AllPages()
+	pages, err := amphorae.List(lbClient, listOpts).AllPages()
 	if err != nil {
-		return fmt.Errorf("Unable to list Ports: %s", err)
+		return fmt.Errorf("Unable to list amphorea: %s", err)
 	}
 
-	var allLbs []Amphora
+	lbs, err := amphorae.ExtractAmphorae(pages)
 
-	err = amphorae.ExtractAmphorae(allPages, &allLbs)
 	if err != nil {
 		return fmt.Errorf("Unable to retrieve amphorea: %s", err)
 	}
 
-	if len(allLbs) == 0 {
+	if len(lbs) == 0 {
 		return fmt.Errorf("No amphorea found")
 	}
 
-    var allIps []String
-    
-    for _, ip := range allLbs {
-        allIps = append(allIps, ip)
-    }
+	var allIps []string
+
+	for _, lb := range lbs {
+		allIps = append(allIps, lb.VRRPPortID)
+	}
 
 	d.SetId(listOpts.LoadbalancerID)
 
 	d.Set("ips", allIps)
-	
+
 	return nil
 }
