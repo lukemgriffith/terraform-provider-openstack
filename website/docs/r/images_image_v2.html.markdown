@@ -19,7 +19,7 @@ resource "openstack_images_image_v2" "rancheros" {
   container_format = "bare"
   disk_format = "qcow2"
 
-  properties {
+  properties = {
     key = "value"
   }
 }
@@ -92,7 +92,7 @@ The following attributes are exported:
 * `id` - A unique ID assigned by Glance.
 * `metadata` - The metadata associated with the image.
    Image metadata allow for meaningfully define the image properties
-   and tags. See http://docs.openstack.org/developer/glance/metadefs-concepts.html.
+   and tags. See https://docs.openstack.org/glance/latest/user/metadefs-concepts.html.
 * `min_disk_gb` - See Argument Reference above.
 * `min_ram_mb` - See Argument Reference above.
 * `name` - See Argument Reference above.
@@ -106,7 +106,8 @@ The following attributes are exported:
 * `status` - The status of the image. It can be "queued", "active"
    or "saving".
 * `tags` - See Argument Reference above.
-* `update_at` - The date the image was last updated.
+* `updated_at` - The date the image was last updated.
+* `update_at` - (**Deprecated** - use `updated_at` instead)
 * `visibility` - See Argument Reference above.
 
 ## Notes

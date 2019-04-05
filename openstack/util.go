@@ -103,16 +103,13 @@ func FormatHeaders(headers http.Header, seperator string) string {
 }
 
 func checkForRetryableError(err error) *resource.RetryError {
-	switch errCode := err.(type) {
+	switch err.(type) {
 	case gophercloud.ErrDefault500:
 		return resource.RetryableError(err)
-	case gophercloud.ErrUnexpectedResponseCode:
-		switch errCode.Actual {
-		case 409, 503:
-			return resource.RetryableError(err)
-		default:
-			return resource.NonRetryableError(err)
-		}
+	case gophercloud.ErrDefault409:
+		return resource.RetryableError(err)
+	case gophercloud.ErrDefault503:
+		return resource.RetryableError(err)
 	default:
 		return resource.NonRetryableError(err)
 	}
@@ -161,6 +158,27 @@ func expandVendorOptions(vendOptsRaw []interface{}) map[string]interface{} {
 	}
 
 	return vendorOptions
+}
+
+func networkV2ReadAttributesTags(d *schema.ResourceData, tags []string) {
+	d.Set("all_tags", tags)
+
+	allTags := d.Get("all_tags").(*schema.Set)
+	desiredTags := d.Get("tags").(*schema.Set)
+	actualTags := allTags.Intersection(desiredTags)
+	if !actualTags.Equal(desiredTags) {
+		d.Set("tags", expandToStringSlice(actualTags.List()))
+	}
+}
+
+func networkV2UpdateAttributesTags(d *schema.ResourceData) (tags []string) {
+	allTags := d.Get("all_tags").(*schema.Set)
+	oldTagsRaw, newTagsRaw := d.GetChange("tags")
+	oldTags, newTags := oldTagsRaw.(*schema.Set), newTagsRaw.(*schema.Set)
+
+	allWithoutOld := allTags.Difference(oldTags)
+
+	return expandToStringSlice(allWithoutOld.Union(newTags).List())
 }
 
 func networkV2AttributesTags(d *schema.ResourceData) (tags []string) {
@@ -238,4 +256,81 @@ func strSliceContains(haystack []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+func sliceUnion(a, b []string) []string {
+	var res []string
+	for _, i := range a {
+		if !strSliceContains(res, i) {
+			res = append(res, i)
+		}
+	}
+	for _, k := range b {
+		if !strSliceContains(res, k) {
+			res = append(res, k)
+		}
+	}
+	return res
+}
+
+// compatibleMicroversion will determine if an obtained microversion is
+// compatible with a given microversion.
+func compatibleMicroversion(direction, required, given string) (bool, error) {
+	if direction != "min" && direction != "max" {
+		return false, fmt.Errorf("Invalid microversion direction %s. Must be min or max", direction)
+	}
+
+	if required == "" || given == "" {
+		return false, nil
+	}
+
+	requiredParts := strings.Split(required, ".")
+	if len(requiredParts) != 2 {
+		return false, fmt.Errorf("Not a valid microversion: %s", required)
+	}
+
+	givenParts := strings.Split(given, ".")
+	if len(givenParts) != 2 {
+		return false, fmt.Errorf("Not a valid microversion: %s", given)
+	}
+
+	requiredMajor, requiredMinor := requiredParts[0], requiredParts[1]
+	givenMajor, givenMinor := givenParts[0], givenParts[1]
+
+	requiredMajorInt, err := strconv.Atoi(requiredMajor)
+	if err != nil {
+		return false, fmt.Errorf("Unable to parse microversion: %s", required)
+	}
+
+	requiredMinorInt, err := strconv.Atoi(requiredMinor)
+	if err != nil {
+		return false, fmt.Errorf("Unable to parse microversion: %s", required)
+	}
+
+	givenMajorInt, err := strconv.Atoi(givenMajor)
+	if err != nil {
+		return false, fmt.Errorf("Unable to parse microversion: %s", given)
+	}
+
+	givenMinorInt, err := strconv.Atoi(givenMinor)
+	if err != nil {
+		return false, fmt.Errorf("Unable to parse microversion: %s", given)
+	}
+
+	switch direction {
+	case "min":
+		if requiredMajorInt == givenMajorInt {
+			if requiredMinorInt <= givenMinorInt {
+				return true, nil
+			}
+		}
+	case "max":
+		if requiredMajorInt == givenMajorInt {
+			if requiredMinorInt >= givenMinorInt {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }

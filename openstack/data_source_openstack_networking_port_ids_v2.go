@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
 
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/dns"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 )
 
@@ -78,6 +79,13 @@ func dataSourceNetworkingPortIDsV2() *schema.Resource {
 			},
 
 			"fixed_ip": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validation.SingleIP(),
+			},
+
+			"status": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
@@ -96,6 +104,12 @@ func dataSourceNetworkingPortIDsV2() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+
+			"dns_name": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
 			},
 
 			"sort_key": {
@@ -125,8 +139,12 @@ func dataSourceNetworkingPortIDsV2() *schema.Resource {
 func dataSourceNetworkingPortIDsV2Read(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 	networkingClient, err := config.networkingV2Client(GetRegion(d, config))
+	if err != nil {
+		return fmt.Errorf("Error creating OpenStack networking client: %s", err)
+	}
 
 	listOpts := ports.ListOpts{}
+	var listOptsBuilder ports.ListOptsBuilder
 
 	if v, ok := d.GetOk("sort_key"); ok {
 		listOpts.SortKey = v.(string)
@@ -150,6 +168,10 @@ func dataSourceNetworkingPortIDsV2Read(d *schema.ResourceData, meta interface{})
 	}
 
 	if v, ok := d.GetOk("network_id"); ok {
+		listOpts.NetworkID = v.(string)
+	}
+
+	if v, ok := d.GetOk("status"); ok {
 		listOpts.Status = v.(string)
 	}
 
@@ -178,46 +200,49 @@ func dataSourceNetworkingPortIDsV2Read(d *schema.ResourceData, meta interface{})
 		listOpts.Tags = strings.Join(tags, ",")
 	}
 
-	allPages, err := ports.List(networkingClient, listOpts).AllPages()
+	listOptsBuilder = listOpts
+
+	if v, ok := d.GetOk("dns_name"); ok {
+		listOptsBuilder = dns.PortListOptsExt{
+			ListOptsBuilder: listOptsBuilder,
+			DNSName:         v.(string),
+		}
+	}
+
+	allPages, err := ports.List(networkingClient, listOptsBuilder).AllPages()
 	if err != nil {
-		return fmt.Errorf("Unable to list Ports: %s", err)
+		return fmt.Errorf("Unable to list openstack_networking_port_ids_v2: %s", err)
 	}
 
 	allPorts, err := ports.ExtractPorts(allPages)
 	if err != nil {
-		return fmt.Errorf("Unable to retrieve Ports: %s", err)
+		return fmt.Errorf("Unable to retrieve openstack_networking_port_ids_v2: %s", err)
 	}
 
 	if len(allPorts) == 0 {
-		return fmt.Errorf("No Port found")
+		log.Printf("[DEBUG] No ports in openstack_networking_port_ids_v2 found")
 	}
 
 	var portsList []ports.Port
 	var portIDs []string
 
-	// Create a slice of all returned Fixed IPs.
-	// This will be in the order returned by the API,
-	// which is usually alpha-numeric.
+	// Filter returned Fixed IPs by a "fixed_ip".
 	if v, ok := d.GetOk("fixed_ip"); ok {
 		for _, p := range allPorts {
-			var ips = []string{}
 			for _, ipObject := range p.FixedIPs {
-				ips = append(ips, ipObject.IPAddress)
-				if v == ipObject.IPAddress {
+				if v.(string) == ipObject.IPAddress {
 					portsList = append(portsList, p)
 				}
 			}
 		}
 		if len(portsList) == 0 {
-			log.Printf("No Port found after the 'fixed_ip' filter")
-			return fmt.Errorf("No Port found")
+			log.Printf("[DEBUG] No ports in openstack_networking_port_ids_v2 found after the 'fixed_ip' filter")
 		}
 	} else {
 		portsList = allPorts
 	}
 
-	v := d.Get("security_group_ids").(*schema.Set)
-	securityGroups := resourcePortSecurityGroupsV2(v)
+	securityGroups := expandToStringSlice(d.Get("security_group_ids").(*schema.Set).List())
 	if len(securityGroups) > 0 {
 		var sgPorts []ports.Port
 		for _, p := range portsList {
@@ -228,8 +253,7 @@ func dataSourceNetworkingPortIDsV2Read(d *schema.ResourceData, meta interface{})
 			}
 		}
 		if len(sgPorts) == 0 {
-			log.Printf("No Port found after the 'security_group_ids' filter")
-			return fmt.Errorf("No Port found")
+			log.Printf("[DEBUG] No ports in openstack_networking_port_ids_v2 found after the 'security_group_ids' filter")
 		}
 		portsList = sgPorts
 	}
@@ -238,7 +262,7 @@ func dataSourceNetworkingPortIDsV2Read(d *schema.ResourceData, meta interface{})
 		portIDs = append(portIDs, p.ID)
 	}
 
-	log.Printf("[DEBUG] Retrieved %d Ports: %+v", len(portsList), portsList)
+	log.Printf("[DEBUG] Retrieved %d ports in openstack_networking_port_ids_v2: %+v", len(portsList), portsList)
 
 	d.SetId(fmt.Sprintf("%d", hashcode.String(strings.Join(portIDs, ""))))
 	d.Set("ids", portIDs)

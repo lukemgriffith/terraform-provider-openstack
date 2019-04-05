@@ -3,6 +3,7 @@ package openstack
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 
@@ -53,6 +54,28 @@ func dataSourceNetworkingFloatingIPV2() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+
+			"dns_name": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"dns_domain": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"all_tags": {
+				Type:     schema.TypeSet,
+				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
 		},
 	}
 }
@@ -60,6 +83,9 @@ func dataSourceNetworkingFloatingIPV2() *schema.Resource {
 func dataSourceNetworkingFloatingIPV2Read(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 	networkingClient, err := config.networkingV2Client(GetRegion(d, config))
+	if err != nil {
+		return fmt.Errorf("Error creating OpenStack networking client: %s", err)
+	}
 
 	listOpts := floatingips.ListOpts{}
 
@@ -87,12 +113,23 @@ func dataSourceNetworkingFloatingIPV2Read(d *schema.ResourceData, meta interface
 		listOpts.FixedIP = v.(string)
 	}
 
+	if v, ok := d.GetOk("status"); ok {
+		listOpts.Status = v.(string)
+	}
+
+	tags := networkV2AttributesTags(d)
+	if len(tags) > 0 {
+		listOpts.Tags = strings.Join(tags, ",")
+	}
+
 	pages, err := floatingips.List(networkingClient, listOpts).AllPages()
 	if err != nil {
 		return fmt.Errorf("Unable to list openstack_networking_floatingips_v2: %s", err)
 	}
 
-	allFloatingIPs, err := floatingips.ExtractFloatingIPs(pages)
+	var allFloatingIPs []floatingIPExtended
+
+	err = floatingips.ExtractFloatingIPsInto(pages, &allFloatingIPs)
 	if err != nil {
 		return fmt.Errorf("Unable to retrieve openstack_networking_floatingips_v2: %s", err)
 	}
@@ -111,12 +148,15 @@ func dataSourceNetworkingFloatingIPV2Read(d *schema.ResourceData, meta interface
 	d.SetId(fip.ID)
 
 	d.Set("description", fip.Description)
-	d.Set("address", fip.FloatingIP)
+	d.Set("address", fip.FloatingIP.FloatingIP)
 	d.Set("pool", fip.FloatingNetworkID)
 	d.Set("port_id", fip.PortID)
 	d.Set("fixed_ip", fip.FixedIP)
 	d.Set("tenant_id", fip.TenantID)
 	d.Set("status", fip.Status)
+	d.Set("all_tags", fip.Tags)
+	d.Set("dns_name", fip.DNSName)
+	d.Set("dns_domain", fip.DNSDomain)
 	d.Set("region", GetRegion(d, config))
 
 	return nil

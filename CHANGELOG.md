@@ -1,4 +1,109 @@
-## 1.14.0 (Unreleased)
+## 1.18.0 (Unreleased)
+## 1.17.0 (April 01, 2019)
+
+NOTES
+
+* `extra_dhcp_option` in the `openstack_networking_port_v2` data source has been changed to a List. This is to resolve a bug where multiple DHCP options were not being rendered.
+
+
+FEATURES
+
+* __New Resource__: `openstack_identity_application_credential_v3` ([#660](https://github.com/terraform-providers/terraform-provider-openstack/issues/660))
+* __New Data Source__: `openstack_blockstorage_availability_zones_v3` ([#652](https://github.com/terraform-providers/terraform-provider-openstack/issues/652))
+* __New Data Source__: `openstack_sharedfilesystem_availability_zones_v2` ([#652](https://github.com/terraform-providers/terraform-provider-openstack/issues/652))
+* __New Data Source__: `openstack_networking_trunk_v2` ([#626](https://github.com/terraform-providers/terraform-provider-openstack/issues/626))
+
+IMPROVEMENTS
+
+* Reduced API calls when updating `extra_dhcp_option` in `openstack_networking_port_v2` ([#689](https://github.com/terraform-providers/terraform-provider-openstack/issues/689))
+* Added `port_security_enabled` to `openstack_networking_network_v2` ([#681](https://github.com/terraform-providers/terraform-provider-openstack/issues/681))
+* Added `port_security_enabled` to `openstack_networking_port_v2` ([#682](https://github.com/terraform-providers/terraform-provider-openstack/issues/682))
+* Added `prefix_length` to `openstack_networking_subnet_v2` ([#705](https://github.com/terraform-providers/terraform-provider-openstack/issues/705))
+* Added `binding` to `openstack_networking_port_v2` ([#693](https://github.com/terraform-providers/terraform-provider-openstack/issues/693))
+* Added `binding` to `openstack_networking_port_v2` data source ([#693](https://github.com/terraform-providers/terraform-provider-openstack/issues/693))
+* Added `mtu` to `openstack_networking_network_v2` ([#708](https://github.com/terraform-providers/terraform-provider-openstack/issues/708))
+* Added `mtu` to `openstack_networking_network_v2` data source ([#708](https://github.com/terraform-providers/terraform-provider-openstack/issues/708))
+* Added `dns_name` and `dns_domain` to `openstack_networking_floatingip_v2` ([#706](https://github.com/terraform-providers/terraform-provider-openstack/issues/706))
+* Added `dns_name` and `dns_domain` to `openstack_networking_floatingip_v2` data source ([#706](https://github.com/terraform-providers/terraform-provider-openstack/issues/706))
+* Added `dns_domain` to `openstack_networking_network_v2` ([#706](https://github.com/terraform-providers/terraform-provider-openstack/issues/706))
+* Added `dns_domain` to `openstack_networking_network_v2` data source ([#706](https://github.com/terraform-providers/terraform-provider-openstack/issues/706))
+* Added `dns_name` and `dns_assignment` to `openstack_networking_port_v2` ([#706](https://github.com/terraform-providers/terraform-provider-openstack/issues/706))
+* Added `dns_name` and `dns_assignment` to `openstack_networking_port_v2` data source ([#706](https://github.com/terraform-providers/terraform-provider-openstack/issues/706))
+* Added `fixed_ip` to `openstack_networking_floatingip_associate_v2` ([#709](https://github.com/terraform-providers/terraform-provider-openstack/issues/709))
+* Enable `fixed_ip` to be updated in `openstack_networking_floatingip_v2` ([#709](https://github.com/terraform-providers/terraform-provider-openstack/issues/709))
+* Added ability to specify `cephx` as `access_type` and to retrieve the `access_key` in `openstack_sharedfilesystem_share_access_v2` ([#715](https://github.com/terraform-providers/terraform-provider-openstack/issues/715))
+
+BUG FIXES
+
+* Fixed bug in `openstack_identity_auth_scope_v3` data source where the `user_id` attribute was being set to the user's Name and not ID ([#660](https://github.com/terraform-providers/terraform-provider-openstack/issues/660))
+* Fixed bug in Load Balancer resources for Contrail-based load balancers ([#691](https://github.com/terraform-providers/terraform-provider-openstack/issues/691))
+* `extra_dhcp_option` in the `openstack_networking_port_v2` data source has been changed to a List. This is to resolve a bug where multiple DHCP options were not being rendered ([#695](https://github.com/terraform-providers/terraform-provider-openstack/issues/695))
+
+## 1.16.0 (February 14, 2019)
+
+NOTES
+
+* The `openstack_networking_subnet_v2.host_routes` argument has been marked as deprecated. Please use the dedicated `openstack_networking_subnet_route_v2` resource instead.
+
+FEATURES
+
+* __New Data Source__: `openstack_compute_availability_zones_v2` ([#655](https://github.com/terraform-providers/terraform-provider-openstack/issues/655))
+
+BUG FIXES
+
+* The `openstack_networking_subnet_v2.host_routes` argument has been deprecated due to schema issues and conflicts with `openstack_networking_subnet_route_v2` ([#668](https://github.com/terraform-providers/terraform-provider-openstack/issues/668))
+* A previously added validation to `openstack_networking_port_v2.fixed_ip.ip_address` was removed as it was causing problems for prior behavior of using an empty string ([#678](https://github.com/terraform-providers/terraform-provider-openstack/issues/678))
+
+## 1.15.1 (February 08, 2019)
+
+BUG FIXES
+
+* Fixed issue where volume multiattachments would not be retried ([#540](https://github.com/terraform-providers/terraform-provider-openstack/issues/540))
+* Reverted an incorrect schema validation for `openstack_networking_port_v2.allowed_address_pairs` ([#661](https://github.com/terraform-providers/terraform-provider-openstack/issues/661))
+
+## 1.15.0 (February 06, 2019)
+
+NOTES
+
+* The `openstack_images_image_v2.update_at` attribute has been deprecated in favor of `updated_at` ([#617](https://github.com/terraform-providers/terraform-provider-openstack/issues/617))
+
+FEATURES
+
+* __New Resource__: `openstack_networking_addressscope_v2` ([#634](https://github.com/terraform-providers/terraform-provider-openstack/issues/634))
+* __New Resource__: `openstack_networking_port_secgroup_associate_v2` ([#574](https://github.com/terraform-providers/terraform-provider-openstack/issues/574))
+
+IMPROVEMENTS
+
+* Added `flavor_id` to the `openstack_compute_flavor_v2` data source so flavors can be queried by ID ([#587](https://github.com/terraform-providers/terraform-provider-openstack/issues/587))
+* `openstack_networking_port_ids_v2` data source can now return an empty set of results ([#631](https://github.com/terraform-providers/terraform-provider-openstack/issues/631))
+* Added `description` to `openstack_networking_trunk_v2` resource ([#625](https://github.com/terraform-providers/terraform-provider-openstack/issues/625))
+* Added `tags` to the networking data source to query by tags and `all_tags` to see a full list of tags ([#624](https://github.com/terraform-providers/terraform-provider-openstack/issues/624))
+* `openstack_compute_instance_v2.admin_pass` is now a "sensitive" attribute ([#647](https://github.com/terraform-providers/terraform-provider-openstack/issues/647))
+* Added support to authenticate with Application Credentials ([#642](https://github.com/terraform-providers/terraform-provider-openstack/issues/642))
+* Added ability to specify region in `openstack_sharedfilesystem_share_access_v2` ([#654](https://github.com/terraform-providers/terraform-provider-openstack/issues/654))
+* Added ability to specify region in `openstack_sharedfilesystem_share_v2` ([#654](https://github.com/terraform-providers/terraform-provider-openstack/issues/654))
+* Added `all_tags` attribute to Networking resources to set tags provided by the OpenStack backend automatically ([#623](https://github.com/terraform-providers/terraform-provider-openstack/issues/623))
+
+BUG FIXES
+
+* Fixed `created_at`, `updated_at`, and `tag` fields in the `openstack_images_image_v2` data source ([#615](https://github.com/terraform-providers/terraform-provider-openstack/issues/615))
+* Fixed `created_at` and `updated_at` fields in the `openstack_networking_subnetpool_v2` resource ([#619](https://github.com/terraform-providers/terraform-provider-openstack/issues/619))
+* Fixed `created_at` and `updated_at` fields in the `openstack_networking_subnetpool_v2` data source ([#616](https://github.com/terraform-providers/terraform-provider-openstack/issues/616))
+* Fixed issue where updating the description of a floating IP would cause the port to disassociate ([#606](https://github.com/terraform-providers/terraform-provider-openstack/issues/606))
+* `admin_state_up` and `shared` fields of `openstack_networking_network_v2` are now correct boolean fields ([#593](https://github.com/terraform-providers/terraform-provider-openstack/issues/593))
+* `external` field of `openstack_networking_network_v2` field will now show an actual value ([#593](https://github.com/terraform-providers/terraform-provider-openstack/issues/593))
+* Fixed issue where `status` was being used as the query value for `network_id` in `openstack_networking_port_v2` data source ([#631](https://github.com/terraform-providers/terraform-provider-openstack/issues/631))
+* Fixed issue where `status` was being used as the query value for `network_id` in `openstack_networking_port_ids_v2` data source ([#631](https://github.com/terraform-providers/terraform-provider-openstack/issues/631))
+* The `openstack_images_image_v2` fields `update_at`, `updated_at`, and `created_at` all now set correctly ([#617](https://github.com/terraform-providers/terraform-provider-openstack/issues/617))
+* Fixed issue with `openstack_dns_recordset_v2` where `records` would be returned out of order ([#636](https://github.com/terraform-providers/terraform-provider-openstack/issues/636))
+* Fixed issue where `openstack_compute_volume_attach_v2` and `openstack_blockstorage_volume_v2` were trying to detach volumes at the same time ([#640](https://github.com/terraform-providers/terraform-provider-openstack/issues/640))
+* Fixed a regression bug where destroying networks was failing on a 409 code ([#644](https://github.com/terraform-providers/terraform-provider-openstack/issues/644))
+* Fixed an issue with `openstack_compute_instance_v2` where a 404 was triggering an error ([#647](https://github.com/terraform-providers/terraform-provider-openstack/issues/647))
+* Fixed an issue where `all_fixed_ips` was not being set in `openstack_networking_port_v2` data source ([#649](https://github.com/terraform-providers/terraform-provider-openstack/issues/649))
+* Fixed an issue where `openstack_networking_port_v2` would cause an API error ([#649](https://github.com/terraform-providers/terraform-provider-openstack/issues/649))
+* Fixed an issue where Blockstorage volume resources couldn't be detached because they had been removed ([#641](https://github.com/terraform-providers/terraform-provider-openstack/issues/641))
+
+## 1.14.0 (January 15, 2019)
 
 NOTES
 
@@ -7,39 +112,39 @@ NOTES
 
 FEATURES
 
-* __New Resource__: `openstack_lb_l7policy_v2` [GH-527]
-* __New Resource__: `openstack_lb_l7rule_v2` [GH-522]
-* __New Resource__: `openstack_sharedfilesystem_share_v2` [GH-525]
-* __New Resource__: `openstack_sharedfilesystem_share_access_v2` [GH-526]
-* __New Data Source__: `openstack_sharedfilesystem_share_v2` [GH-564]
-* __New Data Source__: `openstack_networking_port_v2` [GH-567]
-* __New Data Source__: `openstack_sharedfilesystem_sharenetwork_v2` [GH-576]
-* __New Data Source__: `openstack_networking_port_ids_v2` [GH-569]
-* __New Data Source__: `openstack_sharedfilesystem_snapshot_v2` [GH-577]
+* __New Resource__: `openstack_lb_l7policy_v2` ([#527](https://github.com/terraform-providers/terraform-provider-openstack/issues/527))
+* __New Resource__: `openstack_lb_l7rule_v2` ([#522](https://github.com/terraform-providers/terraform-provider-openstack/issues/522))
+* __New Resource__: `openstack_sharedfilesystem_share_v2` ([#525](https://github.com/terraform-providers/terraform-provider-openstack/issues/525))
+* __New Resource__: `openstack_sharedfilesystem_share_access_v2` ([#526](https://github.com/terraform-providers/terraform-provider-openstack/issues/526))
+* __New Data Source__: `openstack_sharedfilesystem_share_v2` ([#564](https://github.com/terraform-providers/terraform-provider-openstack/issues/564))
+* __New Data Source__: `openstack_networking_port_v2` ([#567](https://github.com/terraform-providers/terraform-provider-openstack/issues/567))
+* __New Data Source__: `openstack_sharedfilesystem_sharenetwork_v2` ([#576](https://github.com/terraform-providers/terraform-provider-openstack/issues/576))
+* __New Data Source__: `openstack_networking_port_ids_v2` ([#569](https://github.com/terraform-providers/terraform-provider-openstack/issues/569))
+* __New Data Source__: `openstack_sharedfilesystem_snapshot_v2` ([#577](https://github.com/terraform-providers/terraform-provider-openstack/issues/577))
 
 IMPROVEMENTS
 
-* Provider options `swauth` and `use_octavia` will correctly use a default value of `false` when they are not specified. This is to help with compatibility for v0.12 [GH-494]
-* Enhanced the pending status checks of the Load Balancer v2 resources [GH-550]
-* Prioritized the status of Load Balancer v2 resources to first use the Load Balancer's master status [GH-556]
-* Fix flavor detection in `openstack_compute_instance_v2` and `openstack_containerinfra_cluster_v1` for Terraform v0.12 [GH-551]
-* Added the ability to import `openstack_lb_loadbalancer_v2` [GH-524]
-* Added the ability to import `openstack_lb_listener_v2` [GH-524]
-* Added the ability to import `openstack_lb_pool_v2` [GH-524]
-* Added the ability to import `openstack_lb_member_v2` [GH-524]
-* Added the ability to import `openstack_lb_monitor_v2` [GH-524]
-* Added `device_type` and `disk_bus` to `openstack_compute_instance_v2` block device [GH-558]
-* Added `transparent_vlan` to `openstack_networking_network_v2` [GH-513]
-* Added `transparent_vlan` to `openstack_networking_network_v2` data source [GH-538]
-* Added `max_retries` to the provider options [GH-413]
-* Added the ability to override catalog endpoints [GH-501]
-* Changed the `segments` attribute of the `openstack_networking_network_v2` to `TypeSet` [GH-578] 
+* Provider options `swauth` and `use_octavia` will correctly use a default value of `false` when they are not specified. This is to help with compatibility for v0.12 ([#494](https://github.com/terraform-providers/terraform-provider-openstack/issues/494))
+* Enhanced the pending status checks of the Load Balancer v2 resources ([#550](https://github.com/terraform-providers/terraform-provider-openstack/issues/550))
+* Prioritized the status of Load Balancer v2 resources to first use the Load Balancer's master status ([#556](https://github.com/terraform-providers/terraform-provider-openstack/issues/556))
+* Fix flavor detection in `openstack_compute_instance_v2` and `openstack_containerinfra_cluster_v1` for Terraform v0.12 ([#551](https://github.com/terraform-providers/terraform-provider-openstack/issues/551))
+* Added the ability to import `openstack_lb_loadbalancer_v2` ([#524](https://github.com/terraform-providers/terraform-provider-openstack/issues/524))
+* Added the ability to import `openstack_lb_listener_v2` ([#524](https://github.com/terraform-providers/terraform-provider-openstack/issues/524))
+* Added the ability to import `openstack_lb_pool_v2` ([#524](https://github.com/terraform-providers/terraform-provider-openstack/issues/524))
+* Added the ability to import `openstack_lb_member_v2` ([#524](https://github.com/terraform-providers/terraform-provider-openstack/issues/524))
+* Added the ability to import `openstack_lb_monitor_v2` ([#524](https://github.com/terraform-providers/terraform-provider-openstack/issues/524))
+* Added `device_type` and `disk_bus` to `openstack_compute_instance_v2` block device ([#558](https://github.com/terraform-providers/terraform-provider-openstack/issues/558))
+* Added `transparent_vlan` to `openstack_networking_network_v2` ([#513](https://github.com/terraform-providers/terraform-provider-openstack/issues/513))
+* Added `transparent_vlan` to `openstack_networking_network_v2` data source ([#538](https://github.com/terraform-providers/terraform-provider-openstack/issues/538))
+* Added `max_retries` to the provider options ([#413](https://github.com/terraform-providers/terraform-provider-openstack/issues/413))
+* Added the ability to override catalog endpoints ([#501](https://github.com/terraform-providers/terraform-provider-openstack/issues/501))
+* Changed the `segments` attribute of the `openstack_networking_network_v2` to `TypeSet` [[#578](https://github.com/terraform-providers/terraform-provider-openstack/issues/578)] 
 
 BUG FIXES
 
-* `openstack_compute_interface_attach_v2` now correctly sets the `instance_id` [GH-557] 
-* `openstack_networking_port_v2` will now correctly set the `admin_state_up` to `true/UP` if left omitted [GH-594]
-* Fixed out of range panic in `openstack_compute_instance_v2` when no IP addresses were detected [GH-539]
+* `openstack_compute_interface_attach_v2` now correctly sets the `instance_id` [[#557](https://github.com/terraform-providers/terraform-provider-openstack/issues/557)] 
+* `openstack_networking_port_v2` will now correctly set the `admin_state_up` to `true/UP` if left omitted ([#594](https://github.com/terraform-providers/terraform-provider-openstack/issues/594))
+* Fixed out of range panic in `openstack_compute_instance_v2` when no IP addresses were detected ([#539](https://github.com/terraform-providers/terraform-provider-openstack/issues/539))
 
 ## 1.13.0 (December 18, 2018)
 

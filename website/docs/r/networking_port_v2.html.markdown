@@ -12,6 +12,8 @@ Manages a V2 port resource within OpenStack.
 
 ## Example Usage
 
+### Simple port
+
 ```hcl
 resource "openstack_networking_network_v2" "network_1" {
   name           = "network_1"
@@ -22,6 +24,45 @@ resource "openstack_networking_port_v2" "port_1" {
   name           = "port_1"
   network_id     = "${openstack_networking_network_v2.network_1.id}"
   admin_state_up = "true"
+}
+```
+
+### Port with physical binding information
+
+```hcl
+resource "openstack_networking_network_v2" "network_1" {
+  name           = "network_1"
+  admin_state_up = "true"
+}
+
+resource "openstack_networking_port_v2" "port_1" {
+  name           = "port_1"
+  network_id     = "${openstack_networking_network_v2.network_1.id}"
+  device_id      = "cdf70fcf-c161-4f24-9c70-96b3f5a54b71"
+  device_owner   = "baremetal:none"
+  admin_state_up = "true"
+
+  binding = {
+    host_id   = "b080b9cf-46e0-4ce8-ad47-0fd4accc872b"
+    vnic_type = "baremetal"
+    profile   = <<EOF
+{
+  "local_link_information": [
+    {
+      "switch_info": "info1",
+      "port_id": "Ethernet3/4",
+      "switch_id": "12:34:56:78:9A:BC"
+    },
+    {
+      "switch_info": "info2",
+      "port_id": "Ethernet3/4",
+      "switch_id": "12:34:56:78:9A:BD"
+    }
+  ],
+  "vlan_type": "allowed"
+}
+EOF
+  }
 }
 ```
 
@@ -85,7 +126,22 @@ The following arguments are supported:
     on the port. The structure is described below. Can be specified multiple
     times.
 
+* `port_security_enabled` - (Optional) Whether to explicitly enable or disable
+  port security on the port. Port Security is usually enabled by default, so
+  omitting argument will usually result in a value of "true". Setting this
+  explicitly to `false` will disable port security. In order to disable port
+  security, the port must not have any security groups. Valid values are `true`
+  and `false`.
+
 * `value_specs` - (Optional) Map of additional options.
+
+* `tags` - (Optional) A set of string tags for the port.
+
+* `binding` - (Optional) The port binding allows to specify binding information
+    for the port. The structure is described below.
+
+* `dns_name` - (Optional) The port DNS name. Available, when Neutron DNS extension
+    is enabled.
 
 The `fixed_ip` block supports:
 
@@ -104,8 +160,6 @@ The `allowed_address_pairs` block supports:
 
 * `mac_address` - (Optional) The additional MAC address.
 
-* `tags` - (Optional) A set of string tags for the port.
-
 The `extra_dhcp_option` block supports:
 
 * `name` - (Required) Name of the DHCP option.
@@ -113,6 +167,22 @@ The `extra_dhcp_option` block supports:
 * `value` - (Required) Value of the DHCP option.
 
 * `ip_version` - (Optional) IP protocol version. Defaults to 4.
+
+The `binding` block supports:
+
+* `host_id` - (Optional) The ID of the host to allocate port on.
+
+* `profile` - (Optional) Custom data to be passed as `binding:profile`. Data
+    must be passed as JSON.
+
+* `vnic_type` - (Optional) VNIC type for the port. Can either be `direct`,
+    `direct-physical`, `macvtap`, `normal`, `baremetal` or `virtio-forwarder`.
+    Default value is `normal`.
+
+* `vif_details` - (Computed) A map of JSON strings containing additional
+    details for this specific binding.
+
+* `vif_type` - (Computed) The VNIC type of the port binding.
 
 ## Attributes Reference
 
@@ -133,6 +203,11 @@ The following attributes are exported:
   which have been explicitly and implicitly added.
 * `extra_dhcp_option` - See Argument Reference above.
 * `tags` - See Argument Reference above.
+* `all_tags` - The collection of tags assigned on the port, which have been
+  explicitly and implicitly added.
+* `binding` - See Argument Reference above.
+* `dns_name` - See Argument Reference above.
+* `dns_assignment` - The list of maps representing port DNS assignments.
 
 ## Import
 

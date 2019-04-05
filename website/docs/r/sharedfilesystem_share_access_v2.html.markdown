@@ -10,6 +10,10 @@ description: |-
 
 Use this resource to control the share access lists.
 
+~> **Important Security Notice** The access key retrieved by this resource will
+be stored *unencrypted* in your Terraform state file. If you use this resource
+in production, please make sure your state file is sufficiently protected.
+
 ## Example Usage
 
 ### NFS
@@ -117,22 +121,30 @@ output "export_locations" {
 
 The following arguments are supported:
 
+* `region` - The region in which to obtain the V2 Shared File System client.
+    A Shared File System client is needed to create a share access. Changing this
+    creates a new share access.
+
 * `share_id` - (Required) The UUID of the share to which you are granted access.
 
-* `access_type` - (Required) The access rule type. Can either be an ip, user or cert.
+* `access_type` - (Required) The access rule type. Can either be an ip, user,
+  cert, or cephx. cephx support requires an OpenStack environment that supports
+  Shared Filesystem microversion 2.13 (Mitaka) or later.
 
 * `access_to` - (Required) The value that defines the access. Can either be an IP
     address or a username verified by configured Security Service of the Share Network.
 
-* `access_level` - (Required) The access level to the share. Can either be rw or ro.
+* `access_level` - (Required) The access level to the share. Can either be `rw` or `ro`.
 
 ## Attributes Reference
 
 * `id` - The unique ID for the Share Access.
+* `region` - See Argument Reference above.
 * `share_id` - See Argument Reference above.
 * `access_type` - See Argument Reference above.
 * `access_to` - See Argument Reference above.
 * `access_level` - See Argument Reference above.
+* `access_key` - The access credential of the entity granted access.
 
 ## Import
 

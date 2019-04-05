@@ -22,7 +22,7 @@ resource "openstack_compute_instance_v2" "basic" {
   key_pair        = "my_key_pair_name"
   security_groups = ["default"]
 
-  metadata {
+  metadata = {
     this = "that"
   }
 
@@ -336,7 +336,7 @@ The following arguments are supported:
     structure is documented below. Changing this creates a new server.
     You can specify multiple block devices which will create an instance with
     multiple disks. This configuration is very flexible, so please see the
-    following [reference](http://docs.openstack.org/developer/nova/block_device_mapping.html)
+    following [reference](https://docs.openstack.org/nova/latest/user/block-device-mapping.html)
     for more information.
 
 * `scheduler_hints` - (Optional) Provide the Nova scheduler with hints on how
@@ -438,7 +438,7 @@ The `personality` block supports:
 
 * `file` - (Required) The absolute path of the destination file.
 
-* `contents` - (Required) The contents of the file. Limited to 255 bytes.
+* `content` - (Required) The contents of the file. Limited to 255 bytes.
 
 The `vendor_options` block supports:
 
@@ -453,8 +453,7 @@ The following attributes are exported:
 
 * `region` - See Argument Reference above.
 * `name` - See Argument Reference above.
-* `access_ip_v4` - The first detected Fixed IPv4 address _or_ the
-    Floating IP.
+* `access_ip_v4` - The first detected Fixed IPv4 address.
 * `access_ip_v6` - The first detected Fixed IPv6 address.
 * `metadata` - See Argument Reference above.
 * `security_groups` - See Argument Reference above.
@@ -591,3 +590,27 @@ resource "openstack_compute_instance_v2" "instance_1" {
   }
 }
 ```
+
+### Instances and Networks
+
+Instances almost always require a network. Here are some notes to be aware of
+with how Instances and Networks relate:
+
+* In scenarios where you only have one network available, you can create an
+instance without specifying a `network` block. OpenStack will automatically
+launch the instance on this network.
+
+* If you have access to more than one network, you will need to specify a network
+with a `network` block. Not specifying a network will result in the following
+error:
+
+```
+* openstack_compute_instance_v2.instance: Error creating OpenStack server:
+Expected HTTP response code [201 202] when accessing [POST https://example.com:8774/v2.1/servers], but got 409 instead
+{"conflictingRequest": {"message": "Multiple possible networks found, use a Network ID to be more specific.", "code": 409}}
+```
+
+* If you intend to use the `openstack_compute_interface_attach_v2` resource,
+you still need to make sure one of the above points is satisfied. An instance
+cannot be created without a valid network configuration even if you intend to
+use `openstack_compute_interface_attach_v2` after the instance has been created.

@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/external"
+	mtuext "github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/mtu"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/vlantransparent"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
@@ -82,6 +84,28 @@ func dataSourceNetworkingNetworkV2() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
+
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+
+			"mtu": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+
+			"dns_domain": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"all_tags": {
+				Type:     schema.TypeSet,
+				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
 		},
 	}
 }
@@ -89,6 +113,9 @@ func dataSourceNetworkingNetworkV2() *schema.Resource {
 func dataSourceNetworkingNetworkV2Read(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 	networkingClient, err := config.networkingV2Client(GetRegion(d, config))
+	if err != nil {
+		return fmt.Errorf("Error creating OpenStack networking client: %s", err)
+	}
 
 	// Prepare basic listOpts.
 	var listOpts networks.ListOptsBuilder
@@ -124,6 +151,19 @@ func dataSourceNetworkingNetworkV2Read(d *schema.ResourceData, meta interface{})
 		}
 	}
 
+	// Add the MTU attribute if specified.
+	if v, ok := d.GetOkExists("mtu"); ok {
+		listOpts = mtuext.ListOptsExt{
+			ListOptsBuilder: listOpts,
+			MTU:             v.(int),
+		}
+	}
+
+	tags := networkV2AttributesTags(d)
+	if len(tags) > 0 {
+		listOpts = networks.ListOpts{Tags: strings.Join(tags, ",")}
+	}
+
 	pages, err := networks.List(networkingClient, listOpts).AllPages()
 	if err != nil {
 		return err
@@ -141,18 +181,13 @@ func dataSourceNetworkingNetworkV2Read(d *schema.ResourceData, meta interface{})
 			"Please change your search criteria and try again.")
 	}
 
-	type networkWithExternalExt struct {
-		networks.Network
-		external.NetworkExternalExt
-		vlantransparent.TransparentExt
-	}
-	var allNetworks []networkWithExternalExt
+	var allNetworks []networkExtended
 	err = networks.ExtractNetworksInto(pages, &allNetworks)
 	if err != nil {
 		return fmt.Errorf("Unable to retrieve openstack_networking_networks_v2: %s", err)
 	}
 
-	var refinedNetworks []networkWithExternalExt
+	var refinedNetworks []networkExtended
 	if cidr := d.Get("matching_subnet_cidr").(string); cidr != "" {
 		for _, n := range allNetworks {
 			for _, s := range n.Subnets {
@@ -197,8 +232,11 @@ func dataSourceNetworkingNetworkV2Read(d *schema.ResourceData, meta interface{})
 	d.Set("shared", strconv.FormatBool(network.Shared))
 	d.Set("external", network.External)
 	d.Set("tenant_id", network.TenantID)
-	d.Set("region", GetRegion(d, config))
 	d.Set("transparent_vlan", network.VLANTransparent)
+	d.Set("all_tags", network.Tags)
+	d.Set("mtu", network.MTU)
+	d.Set("dns_domain", network.DNSDomain)
+	d.Set("region", GetRegion(d, config))
 
 	return nil
 }

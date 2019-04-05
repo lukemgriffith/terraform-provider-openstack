@@ -59,6 +59,16 @@ The following arguments are supported:
 
 * `tags` - (Optional) A set of string tags for the floating IP.
 
+* `dns_name` - (Optional) The floating IP DNS name. Available, when Neutron DNS
+    extension is enabled. The data in this attribute will be published in an
+    external DNS service when Neutron is configured to integrate with such a
+    service. Changing this creates a new floating IP.
+
+* `dns_domain` - (Optional) The floating IP DNS domain. Available, when Neutron
+    DNS extension is enabled. The data in this attribute will be published in an
+    external DNS service when Neutron is configured to integrate with such a
+    service. Changing this creates a new floating IP.
+
 ## Attributes Reference
 
 The following attributes are exported:
@@ -71,6 +81,10 @@ The following attributes are exported:
 * `tenant_id` - the ID of the tenant in which to create the floating IP.
 * `fixed_ip` - The fixed IP which the floating IP maps to.
 * `tags` - See Argument Reference above.
+* `all_tags` - The collection of tags assigned on the floating IP, which have
+  been explicitly and implicitly added.
+* `dns_name` - See Argument Reference above.
+* `dns_domain` - See Argument Reference above.
 
 ## Import
 

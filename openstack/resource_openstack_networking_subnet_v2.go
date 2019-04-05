@@ -41,10 +41,17 @@ func resourceNetworkingSubnetV2() *schema.Resource {
 				ForceNew: true,
 			},
 			"cidr": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-				ForceNew: true,
+				Type:          schema.TypeString,
+				ConflictsWith: []string{"prefix_length"},
+				Optional:      true,
+				Computed:      true,
+				ForceNew:      true,
+			},
+			"prefix_length": {
+				Type:          schema.TypeInt,
+				ConflictsWith: []string{"cidr"},
+				Optional:      true,
+				ForceNew:      true,
 			},
 			"name": {
 				Type:     schema.TypeString,
@@ -112,9 +119,10 @@ func resourceNetworkingSubnetV2() *schema.Resource {
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 			"host_routes": {
-				Type:     schema.TypeList,
-				Optional: true,
-				ForceNew: false,
+				Type:       schema.TypeList,
+				Optional:   true,
+				ForceNew:   false,
+				Deprecated: "Use openstack_networking_subnet_route_v2 instead",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"destination_cidr": {
@@ -157,6 +165,11 @@ func resourceNetworkingSubnetV2() *schema.Resource {
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
+			"all_tags": {
+				Type:     schema.TypeSet,
+				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
 		},
 	}
 }
@@ -192,6 +205,14 @@ func resourceNetworkingSubnetV2Create(d *schema.ResourceData, meta interface{}) 
 	if v, ok := d.GetOk("cidr"); ok {
 		cidr := v.(string)
 		createOpts.CIDR = cidr
+	}
+
+	if v, ok := d.GetOk("prefix_length"); ok {
+		if d.Get("subnetpool_id").(string) == "" {
+			return fmt.Errorf("'prefix_length' is only valid if 'subnetpool_id' is set")
+		}
+		prefixLength := v.(int)
+		createOpts.Prefixlen = prefixLength
 	}
 
 	if v, ok := d.GetOk("gateway_ip"); ok {
@@ -266,13 +287,13 @@ func resourceNetworkingSubnetV2Read(d *schema.ResourceData, meta interface{}) er
 	d.Set("description", s.Description)
 	d.Set("tenant_id", s.TenantID)
 	d.Set("dns_nameservers", s.DNSNameservers)
-	d.Set("host_routes", s.HostRoutes)
 	d.Set("enable_dhcp", s.EnableDHCP)
 	d.Set("network_id", s.NetworkID)
 	d.Set("ipv6_address_mode", s.IPv6AddressMode)
 	d.Set("ipv6_ra_mode", s.IPv6RAMode)
 	d.Set("subnetpool_id", s.SubnetPoolID)
-	d.Set("tags", s.Tags)
+
+	networkV2ReadAttributesTags(d, s.Tags)
 
 	// Set the allocation_pools
 	var allocationPools []map[string]interface{}
@@ -373,7 +394,7 @@ func resourceNetworkingSubnetV2Update(d *schema.ResourceData, meta interface{}) 
 	}
 
 	if d.HasChange("tags") {
-		tags := networkV2AttributesTags(d)
+		tags := networkV2UpdateAttributesTags(d)
 		tagOpts := attributestags.ReplaceAllOpts{Tags: tags}
 		tags, err := attributestags.ReplaceAll(networkingClient, "subnets", d.Id(), tagOpts).Extract()
 		if err != nil {
@@ -502,10 +523,8 @@ func waitForSubnetDelete(networkingClient *gophercloud.ServiceClient, subnetId s
 				log.Printf("[DEBUG] Successfully deleted OpenStack Subnet %s", subnetId)
 				return s, "DELETED", nil
 			}
-			if errCode, ok := err.(gophercloud.ErrUnexpectedResponseCode); ok {
-				if errCode.Actual == 409 {
-					return s, "ACTIVE", nil
-				}
+			if _, ok := err.(gophercloud.ErrDefault409); ok {
+				return s, "ACTIVE", nil
 			}
 			return s, "ACTIVE", err
 		}

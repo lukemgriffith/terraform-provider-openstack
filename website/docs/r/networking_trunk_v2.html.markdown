@@ -53,9 +53,9 @@ resource "openstack_networking_trunk_v2" "trunk_1" {
   port_id = "${openstack_networking_port_v2.parent_port_1.id}"
 
   sub_port {
-	  port_id = "${openstack_networking_port_v2.subport_1.id}"
-	  segmentation_id = 1
-	  segmentation_type = "vlan"
+    port_id = "${openstack_networking_port_v2.subport_1.id}"
+    segmentation_id = 1
+    segmentation_type = "vlan"
   }
 }
 
@@ -78,8 +78,11 @@ The following arguments are supported:
     `region` argument of the provider is used. Changing this creates a new
     trunk.
 
-* `name` - (Optional) A unique name for the port. Changing this
-    updates the `name` of an existing port.
+* `name` - (Optional) A unique name for the trunk. Changing this
+    updates the `name` of an existing trunk.
+
+* `description` - (Optional) Human-readable description of the trunk. Changing this
+    updates the name of the existing trunk.
 
 * `port_id` - (Required) The ID of the port to be used as the parent port of the
     trunk. This is the port that should be used as the compute instance network
@@ -95,11 +98,13 @@ The following arguments are supported:
 * `sub_port` - (Optional) The set of ports that will be made subports of the trunk.
     The structure of each subport is described below.
 
+* `tags` - (Optional) A set of string tags for the port.
+
 The `sub_port` block supports:
 
 * `port_id` - (Required) The ID of the port to be made a subport of the trunk.
 
-* `segmentation_type` - (Required) The segmenation tecnology to use, e.g., "vlan".
+* `segmentation_type` - (Required) The segmentation technology to use, e.g., "vlan".
 
 * `segmentation_id` - (Required) The numeric id of the subport segment.
 
@@ -109,7 +114,11 @@ The following attributes are exported:
 
 * `region` - See Argument Reference above.
 * `name` - See Argument Reference above.
+* `description` - See Argument Reference above.
 * `port_id` - See Argument Reference above.
 * `admin_state_up` - See Argument Reference above.
 * `tenant_id` - See Argument Reference above.
-* `sub_port` - See Argument Reference above
+* `sub_port` - See Argument Reference above.
+* `tags` - See Argument Reference above.
+* `all_tags` - The collection of tags assigned on the trunk, which have been
+  explicitly and implicitly added.

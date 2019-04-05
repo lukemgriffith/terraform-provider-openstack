@@ -40,6 +40,11 @@ The following arguments are supported:
     version. You can omit this option if you are creating a subnet from a
     subnet pool.
 
+* `prefix_length` - (Optional) The prefix length to use when creating a subnet
+    from a subnet pool. The default subnet pool prefix length that was defined
+    when creating the subnet pool will be used if not provided. Changing this 
+    creates a new subnet.
+
 * `ip_version` - (Optional) IP version, either 4 (default) or 6. Changing this creates a
     new subnet.
 
@@ -78,7 +83,8 @@ The following arguments are supported:
     in this subnet. Changing this updates the DNS name servers for the existing
     subnet.
 
-* `host_routes` - (Optional) An array of routes that should be used by devices
+* `host_routes` - (**Deprecated** - use `openstack_networking_subnet_route_v2`
+    instead) An array of routes that should be used by devices
     with IPs from this subnet (not including local subnet route). The host_route
     object structure is documented below. Changing this updates the host routes
     for the existing subnet.
@@ -119,6 +125,8 @@ The following attributes are exported:
 * `host_routes` - See Argument Reference above.
 * `subnetpool_id` - See Argument Reference above.
 * `tags` - See Argument Reference above.
+* `all_tags` - The collection of ags assigned on the subnet, which have been
+  explicitly and implicitly added.
 
 ## Import
 

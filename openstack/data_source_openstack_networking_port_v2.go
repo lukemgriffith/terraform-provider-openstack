@@ -6,15 +6,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/structure"
+	"github.com/hashicorp/terraform/helper/validation"
 
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/extradhcpopts"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/dns"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 )
-
-type extraPort struct {
-	ports.Port
-	extradhcpopts.ExtraDHCPOptsExt
-}
 
 func dataSourceNetworkingPortV2() *schema.Resource {
 	return &schema.Resource{
@@ -77,8 +74,15 @@ func dataSourceNetworkingPortV2() *schema.Resource {
 			},
 
 			"fixed_ip": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validation.SingleIP(),
+			},
+
+			"status": {
 				Type:     schema.TypeString,
 				Optional: true,
+				ForceNew: true,
 			},
 
 			"security_group_ids": {
@@ -97,7 +101,7 @@ func dataSourceNetworkingPortV2() *schema.Resource {
 			"allowed_address_pairs": {
 				Type:     schema.TypeSet,
 				Computed: true,
-				Set:      allowedAddressPairsHash,
+				Set:      resourceNetworkingPortV2AllowedAddressPairsHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ip_address": {
@@ -132,7 +136,7 @@ func dataSourceNetworkingPortV2() *schema.Resource {
 			},
 
 			"extra_dhcp_option": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -151,6 +155,50 @@ func dataSourceNetworkingPortV2() *schema.Resource {
 					},
 				},
 			},
+
+			"binding": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host_id": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"profile": {
+							Type:     schema.TypeString,
+							Computed: true,
+							StateFunc: func(v interface{}) string {
+								json, _ := structure.NormalizeJsonString(v)
+								return json
+							},
+						},
+						"vif_details": {
+							Type:     schema.TypeMap,
+							Computed: true,
+						},
+						"vif_type": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"vnic_type": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+					},
+				},
+			},
+
+			"dns_name": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+
+			"dns_assignment": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeMap},
+			},
 		},
 	}
 }
@@ -158,8 +206,12 @@ func dataSourceNetworkingPortV2() *schema.Resource {
 func dataSourceNetworkingPortV2Read(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 	networkingClient, err := config.networkingV2Client(GetRegion(d, config))
+	if err != nil {
+		return fmt.Errorf("Error creating OpenStack networking client: %s", err)
+	}
 
 	listOpts := ports.ListOpts{}
+	var listOptsBuilder ports.ListOptsBuilder
 
 	if v, ok := d.GetOk("port_id"); ok {
 		listOpts.ID = v.(string)
@@ -179,6 +231,10 @@ func dataSourceNetworkingPortV2Read(d *schema.ResourceData, meta interface{}) er
 	}
 
 	if v, ok := d.GetOk("network_id"); ok {
+		listOpts.NetworkID = v.(string)
+	}
+
+	if v, ok := d.GetOk("status"); ok {
 		listOpts.Status = v.(string)
 	}
 
@@ -207,53 +263,53 @@ func dataSourceNetworkingPortV2Read(d *schema.ResourceData, meta interface{}) er
 		listOpts.Tags = strings.Join(tags, ",")
 	}
 
-	allPages, err := ports.List(networkingClient, listOpts).AllPages()
-	if err != nil {
-		return fmt.Errorf("Unable to list Ports: %s", err)
+	listOptsBuilder = listOpts
+
+	if v, ok := d.GetOk("dns_name"); ok {
+		listOptsBuilder = dns.PortListOptsExt{
+			ListOptsBuilder: listOptsBuilder,
+			DNSName:         v.(string),
+		}
 	}
 
-	var allPorts []extraPort
+	allPages, err := ports.List(networkingClient, listOptsBuilder).AllPages()
+	if err != nil {
+		return fmt.Errorf("Unable to list openstack_networking_ports_v2: %s", err)
+	}
+
+	var allPorts []portExtended
 
 	err = ports.ExtractPortsInto(allPages, &allPorts)
 	if err != nil {
-		return fmt.Errorf("Unable to retrieve Ports: %s", err)
+		return fmt.Errorf("Unable to retrieve openstack_networking_ports_v2: %s", err)
 	}
 
 	if len(allPorts) == 0 {
-		return fmt.Errorf("No Port found")
+		return fmt.Errorf("No openstack_networking_port_v2 found")
 	}
 
-	var portsList []extraPort
+	var portsList []portExtended
 
-	// Create a slice of all returned Fixed IPs.
-	// This will be in the order returned by the API,
-	// which is usually alpha-numeric.
+	// Filter returned Fixed IPs by a "fixed_ip".
 	if v, ok := d.GetOk("fixed_ip"); ok {
 		for _, p := range allPorts {
-			var ips = []string{}
 			for _, ipObject := range p.FixedIPs {
-				ips = append(ips, ipObject.IPAddress)
-				if v == ipObject.IPAddress {
+				if v.(string) == ipObject.IPAddress {
 					portsList = append(portsList, p)
 				}
 			}
-			if len(portsList) > 0 && len(ips) > 0 {
-				d.Set("all_fixed_ips", ips)
-				break
-			}
 		}
 		if len(portsList) == 0 {
-			log.Printf("No Port found after the 'fixed_ip' filter")
-			return fmt.Errorf("No Port found")
+			log.Printf("No openstack_networking_port_v2 found after the 'fixed_ip' filter")
+			return fmt.Errorf("No openstack_networking_port_v2 found")
 		}
 	} else {
 		portsList = allPorts
 	}
 
-	v := d.Get("security_group_ids").(*schema.Set)
-	securityGroups := resourcePortSecurityGroupsV2(v)
+	securityGroups := expandToStringSlice(d.Get("security_group_ids").(*schema.Set).List())
 	if len(securityGroups) > 0 {
-		var sgPorts []extraPort
+		var sgPorts []portExtended
 		for _, p := range portsList {
 			for _, sg := range p.SecurityGroups {
 				if strSliceContains(securityGroups, sg) {
@@ -262,19 +318,19 @@ func dataSourceNetworkingPortV2Read(d *schema.ResourceData, meta interface{}) er
 			}
 		}
 		if len(sgPorts) == 0 {
-			log.Printf("[DEBUG] No Port found after the 'security_group_ids' filter")
-			return fmt.Errorf("No Port found")
+			log.Printf("[DEBUG] No openstack_networking_port_v2 found after the 'security_group_ids' filter")
+			return fmt.Errorf("No openstack_networking_port_v2 found")
 		}
 		portsList = sgPorts
 	}
 
 	if len(portsList) > 1 {
-		return fmt.Errorf("More than one Port found (%d)", len(portsList))
+		return fmt.Errorf("More than one openstack_networking_port_v2 found (%d)", len(portsList))
 	}
 
 	port := portsList[0]
 
-	log.Printf("[DEBUG] Retrieved Port %s: %+v", port.ID, port)
+	log.Printf("[DEBUG] Retrieved openstack_networking_port_v2 %s: %+v", port.ID, port)
 	d.SetId(port.ID)
 
 	d.Set("port_id", port.ID)
@@ -290,8 +346,12 @@ func dataSourceNetworkingPortV2Read(d *schema.ResourceData, meta interface{}) er
 	d.Set("region", GetRegion(d, config))
 	d.Set("all_tags", port.Tags)
 	d.Set("all_security_group_ids", port.SecurityGroups)
+	d.Set("all_fixed_ips", expandNetworkingPortFixedIPToStringSlice(port.FixedIPs))
 	d.Set("allowed_address_pairs", flattenNetworkingPortAllowedAddressPairsV2(port.MACAddress, port.AllowedAddressPairs))
 	d.Set("extra_dhcp_option", flattenNetworkingPortDHCPOptsV2(port.ExtraDHCPOptsExt))
+	d.Set("binding", flattenNetworkingPortBindingV2(port))
+	d.Set("dns_name", port.DNSName)
+	d.Set("dns_assignment", port.DNSAssignment)
 
 	return nil
 }

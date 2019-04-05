@@ -57,6 +57,19 @@ The following arguments are supported:
 * `user_id` - (Optional) The User ID to login with. If omitted, the
   `OS_USER_ID` environment variable is used.
 
+* `application_credential_id` - (Optional) (Identity v3 only) The ID of an
+    application credential to authenticate with. An
+    `application_credential_secret` has to bet set along with this parameter.
+
+* `application_credential_name` - (Optional) (Identity v3 only) The name of an
+    application credential to authenticate with. Conflicts with the
+    `application_credential_name`, requires `user_id`, or `user_name` and
+    `user_domain_name` (or `user_domain_id`) to be set.
+
+* `application_credential_secret` - (Optional) (Identity v3 only) The secret of an
+    application credential to authenticate with. Required by
+    `application_credential_id` or `application_credential_name`.
+
 * `tenant_id` - (Optional) The ID of the Tenant (Identity v2) or Project
   (Identity v3) to login with. If omitted, the `OS_TENANT_ID` or
   `OS_PROJECT_ID` environment variables are used.
@@ -311,7 +324,7 @@ a Gophercloud but, please ask.
 ### Vendoring
 
 If you require pulling in changes from an external package, such as Gophercloud,
-this provider uses [govendor](https://github.com/kardianos/govendor).
+this provider uses [Go Modules](https://github.com/golang/go/wiki/Modules).
 
 ### Acceptance Tests
 
@@ -414,7 +427,7 @@ and create a Pull Request.
 ### OpenLab Testing
 
 Once you have created a Pull Request, it will automatically be tested by
-[OpenLab](http://openlabtesting.org/). OpenLab will run most of the Acceptance
+[OpenLab](https://openlabtesting.org/). OpenLab will run most of the Acceptance
 Tests in a clean OpenStack cloud (see below for the resources which you must
 tell OpenLab to run). Testing will take between 90-120 minutes and you will
 receive a notification with a test report when testing has finished.
